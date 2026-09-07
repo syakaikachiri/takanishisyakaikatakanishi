@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>安全な文書作成ツール</title>
+  <style>
+    :root {
+      --bg-color: #f9fbfd;
+      --header-bg: #ffffff;
+      --paper-bg: #ffffff;
+      --text-color: #202124;
+      --border-color: #dadce0;
+      --primary-color: #1a73e8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    header {
+      background-color: var(--header-bg);
+      border-bottom: 1px solid var(--border-color);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .doc-icon {
+      width: 32px;
+      height: 32px;
+      background-color: var(--primary-color);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 16px;
+    }
+
+    .doc-title {
+      font-size: 18px;
+      font-weight: bold;
+      color: #3c4043;
+      border: 1px solid transparent;
+      padding: 2px 6px;
+      border-radius: 4px;
+      outline: none;
+      user-select: text;
+      -webkit-user-select: text;
+    }
+
+    .doc-title:hover, .doc-title:focus {
+      border-color: var(--border-color);
+      background-color: #f1f3f4;
+    }
+
+    .toolbar {
+      background-color: #edf2fc;
+      border-bottom: 1px solid var(--border-color);
+      padding: 6px 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin: 6px 8px;
+      border-radius: 20px;
+    }
+
+    .toolbar-group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      position: relative;
+    }
+
+    .toolbar-btn {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+      color: #444746;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 30px;
+    }
+
+    .toolbar-btn:hover { background-color: #e1e5ea; }
+    .toolbar-btn.danger-btn {
+      color: #d93025;
+      border-color: #fce8e6;
+      background-color: #ffffff;
+    }
+    .toolbar-btn.danger-btn:hover {
+      background-color: #fce8e6;
+    }
+
+    select.toolbar-select {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      padding: 4px 6px;
+      border-radius: 4px;
+      font-size: 13px;
+      color: #444746;
+      cursor: pointer;
+      outline: none;
+      height: 30px;
+    }
+
+    .toolbar-divider {
+      width: 1px;
+      height: 20px;
+      background-color: var(--border-color);
+      margin: 0 4px;
+    }
+
+    .color-picker-dropdown {
+      position: relative;
+      display: inline-block;
+    }
+
+    .color-palette {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      background: white;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      border-radius: 8px;
+      padding: 8px;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 6px;
+      z-index: 1000;
+      margin-top: 4px;
+    }
+
+    .color-palette.show { display: grid; }
+
+    .color-swatch {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 1px solid rgba(0,0,0,0.15);
+      cursor: pointer;
+      position: relative;
+    }
+
+    .color-swatch:hover { transform: scale(1.15); }
+
+    .color-swatch.transparent { background-color: #ffffff !important; }
+    .color-swatch.transparent::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background-color: red;
+      transform: rotate(-45deg);
+    }
+
+    .color-bar-indicator {
+      width: 14px;
+      height: 3px;
+      background-color: #000000;
+      margin-top: 2px;
+      border-radius: 1px;
+    }
+
+    .color-btn-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .warning-badge {
+      margin-left: auto;
+      background-color: #fce8e6;
+      color: #c5221f;
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-weight: bold;
+    }
+
+    .editor-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .paper {
+      background-color: var(--paper-bg);
+      width: 816px;
+      min-height: 1056px;
+      padding: 60px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+      border-radius: 2px;
+      outline: none;
+      font-size: 16px;
+      line-height: 1.6;
+      color: #000000;
+      position: relative;
+      user-select: text;
+      -webkit-user-select: text;
+    }
+
+    .paper table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 10px 0;
+    }
+    .paper td, .paper th {
+      border: 1px solid #dadce0;
+      padding: 8px;
+      min-width: 40px;
+    }
+
+    /* 図形・テキストボックス構造調整 */
+    .interactive-object {
+      position: absolute;
+      display: inline-block;
+      transform-origin: center center;
+      box-sizing: border-box;
+      padding: 0;
+      cursor: move;
+      z-index: 10;
+      user-select: none;
+    }
+
+    .interactive-object.selected {
+      outline: 2px dashed #1a73e8;
+    }
+
+    .rotate-handle {
+      display: none;
+      position: absolute;
+      top: -25px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 12px;
+      height: 12px;
+      background-color: #1a73e8;
+      border: 2px solid #ffffff;
+      border-radius: 50%;
+      cursor: grab;
+      z-index: 20;
+    }
+
+    .resize-handle {
+      display: none;
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background-color: #ffffff;
+      border: 2px solid #1a73e8;
+      z-index: 20;
+    }
+
+    .interactive-object.selected .rotate-handle,
+    .interactive-object.selected .resize-handle {
+      display: block;
+    }
+
+    .resize-handle.nw { top: -6px; left: -6px; cursor: nwse-resize; }
+    .resize-handle.ne { top: -6px; right: -6px; cursor: nesw-resize; }
+    .resize-handle.sw { bottom: -6px; left: -6px; cursor: nesw-resize; }
+    .resize-handle.se { bottom: -6px; right: -6px; cursor: nwse-resize; }
+
+    .shape-body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 8px;
+      outline: none;
+      word-break: break-word;
+      white-space: pre-wrap;
+      user-select: text;
+      -webkit-user-select: text;
+      box-sizing: border-box;
+      border-style: solid;
+      border-width: 0px;
+      border-color: #1a73e8;
+      cursor: text;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .shape-rect {
+      width: 140px;
+      height: 90px;
+      background-color: #1a73e8;
+      color: #ffffff;
+      border-radius: 4px;
+    }
+
+    .shape-circle {
+      width: 120px;
+      height: 120px;
+      background-color: #ea4335;
+      color: #ffffff;
+      border-radius: 50%;
+    }
+
+    .shape-arrow {
+      width: 150px;
+      height: 60px;
+      background-color: #fbbc04;
+      color: #202124;
+      clip-path: polygon(0% 20%, 60% 20%, 60% 0%, 100% 50%, 60% 100%, 60% 80%, 0% 80%);
+      padding-right: 35px;
+    }
+
+    .textbox-shape {
+      width: 200px;
+      height: 80px;
+      background-color: #ffffff;
+      border-width: 1px;
+      border-style: solid;
+      border-color: #1a73e8;
+      padding: 8px;
+      border-radius: 4px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      color: #202124;
+    }
+
+    @media print {
+      body { background-color: #ffffff; height: auto; overflow: visible; }
+      header, .toolbar, .rotate-handle, .resize-handle, .warning-badge { display: none !important; }
+      .editor-container { padding: 0; overflow: visible; }
+      .paper { box-shadow: none; width: 100%; min-height: auto; padding: 0; }
+      .interactive-object.selected { outline: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ヘッダー -->
+  <header>
+    <div class="doc-icon">文</div>
+    <input type="text" class="doc-title" id="docTitle" value="無題の文書" title="クリックしてタイトルを変更">
+  </header>
+
+  <!-- ツールバー -->
+  <div class="toolbar">
+    <div class="toolbar-group">
+      <button class="toolbar-btn" id="saveFileBtn" title="自分のPCに保存">💾 保存</button>
+      <button class="toolbar-btn" id="loadFileBtn" title="保存したファイルを開く">📂 開く</button>
+      <input type="file" id="fileInput" accept=".json" style="display: none;">
+      <button class="toolbar-btn" id="exportPdfBtn" title="PDFとして出力・保存">📄 PDF出力</button>
+    </div>
+
+    <div class="toolbar-divider"></div>
+
+    <div class="toolbar-group">
+      <button class="toolbar-btn" id="undoBtn" title="元に戻す">↩ 元に戻す</button>
+      <button class="toolbar-btn" id="redoBtn" title="やり直す">↪ やり直す</button>
+    </div>
+
+    <div class="toolbar-divider"></div>
+
+    <div class="toolbar-group">
+      <select class="toolbar-select" id="formatBlock">
+        <option value="p">ふつうの文字</option>
+        <option value="h1">大きい見出し</option>
+        <option value="h2">中くらいの見出し</option>
+        <option value="h3">小さい見出し</option>
+      </select>
+
+      <select class="toolbar-select" id="fontName">
+        <option value="Arial">Standard (Arial)</option>
+        <option value="MS Gothic">メイリオ / ゴシック</option>
+        <option value="MS Mincho">明朝体</option>
+      </select>
+
+      <select class="toolbar-select" id="fontSize" title="文字サイズ">
+        <option value="12px">12px</option>
+        <option value="14px">14px</option>
+        <option value="16px" selected>16px (標準)</option>
+        <option value="18px">18px</option>
+        <option value="20px">20px</option>
+        <option value="24px">24px</option>
+        <option value="28px">28px</option>
+        <option value="32px">32px</option>
+        <option value="48px">48px</option>
+      </select>
+    </div>
+
+    <div class="toolbar-divider"></div>
+
+    <div class="toolbar-group">
+      <button class="toolbar-btn" data-cmd="bold" title="太字"><b>太字</b></button>
+      <button class="toolbar-btn" data-cmd="italic" title="斜体"><i>斜体</i></button>
+
+      <!-- 下線＋下線色機能 -->
+      <button class="toolbar-btn" id="underlineBtn" title="下線"><u>下線</u></button>
+      <div class="color-picker-dropdown">
+        <button class="toolbar-btn" id="underlineColorBtn" title="下線の色">
+          <div class="color-btn-content">
+            <span style="font-size: 11px;"><u>線色</u></span>
+            <div class="color-bar-indicator" id="underlineColorIndicator" style="background-color: #000000;"></div>
+          </div>
+        </button>
+        <div class="color-palette" id="underlinePalette">
+          <div class="color-swatch" style="background: #000000;" data-color="#000000" title="黒"></div>
+          <div class="color-swatch" style="background: #ea4335;" data-color="#ea4335" title="赤"></div>
+          <div class="color-swatch" style="background: #1a73e8;" data-color="#1a73e8" title="青"></div>
+          <div class="color-swatch" style="background: #fbbc04;" data-color="#fbbc04" title="黄色"></div>
+          <div class="color-swatch" style="background: #34a853;" data-color="#34a853" title="緑"></div>
+          <div class="color-swatch" style="background: #ff6d01;" data-color="#ff6d01" title="オレンジ"></div>
+          <div class="color-swatch" style="background: #a142f4;" data-color="#a142f4" title="紫"></div>
+          <div class="color-swatch" style="background: #5f6368;" data-color="#5f6368" title="グレー"></div>
+        </div>
+      </div>
+
+      <button class="toolbar-btn" data-cmd="strikeThrough" title="打ち消し線"><s>打消し</s></button>
+
+      <div class="color-picker-dropdown">
+        <button class="toolbar-btn" id="textColorBtn" title="文字の色を選ぶ">
+          <div class="color-btn-content">
+            <span style="font-weight: bold; font-size: 12px;">文字色</span>
+            <div class="color-bar-indicator" id="textColorIndicator"></div>
+          </div>
+        </button>
+        <div class="color-palette" id="textColorPalette">
+          <div class="color-swatch" style="background: #000000;" data-color="#000000" title="黒"></div>
+          <div class="color-swatch" style="background: #ffffff;" data-color="#ffffff" title="白"></div>
+          <div class="color-swatch" style="background: #5f6368;" data-color="#5f6368" title="灰色"></div>
+          <div class="color-swatch" style="background: #1a73e8;" data-color="#1a73e8" title="青"></div>
+          <div class="color-swatch" style="background: #ea4335;" data-color="#ea4335" title="赤"></div>
+          <div class="color-swatch" style="background: #fbbc04;" data-color="#fbbc04" title="黄色"></div>
+          <div class="color-swatch" style="background: #34a853;" data-color="#34a853" title="緑"></div>
+          <div class="color-swatch" style="background: #ff6d01;" data-color="#ff6d01" title="オレンジ"></div>
+          <div class="color-swatch" style="background: #a142f4;" data-color="#a142f4" title="紫"></div>
+          <div class="color-swatch" style="background: #24c1e0;" data-color="#24c1e0" title="水色"></div>
+        </div>
+      </div>
+
+      <!-- ハイライト（蛍光ペン）ボタン拡張 -->
+      <div class="color-picker-dropdown">
+        <button class="toolbar-btn" id="highlightColorBtn" title="文字のハイライト（マーカー）">
+          <div class="color-btn-content">
+            <span style="font-size: 12px;">🖍️ マーカー</span>
+            <div class="color-bar-indicator" id="highlightColorIndicator" style="background-color: #fef08a;"></div>
+          </div>
+        </button>
+        <div class="color-palette" id="highlightPalette" style="grid-template-columns: repeat(5, 1fr);">
+          <div class="color-swatch transparent" data-color="transparent" title="ハイライトなし"></div>
+          <div class="color-swatch" style="background: #fef08a;" data-color="#fef08a" title="明るい黄色"></div>
+          <div class="color-swatch" style="background: #eab308;" data-color="#eab308" title="濃い黄色（ゴールド）"></div>
+          <div class="color-swatch" style="background: #ca8a04;" data-color="#ca8a04" title="山吹色・ダークイエロー"></div>
+          <div class="color-swatch" style="background: #bbf7d0;" data-color="#bbf7d0" title="薄い緑色"></div>
+          <div class="color-swatch" style="background: #22c55e;" data-color="#22c55e" title="鮮やかな緑色"></div>
+          <div class="color-swatch" style="background: #bae6fd;" data-color="#bae6fd" title="スカイブルー"></div>
+          <div class="color-swatch" style="background: #38bdf8;" data-color="#38bdf8" title="鮮やかな青"></div>
+          <div class="color-swatch" style="background: #fbcfe8;" data-color="#fbcfe8" title="パステルピンク"></div>
+          <div class="color-swatch" style="background: #f43f5e;" data-color="#f43f5e" title="ローズピンク"></div>
+          <div class="color-swatch" style="background: #fed7aa;" data-color="#fed7aa" title="ライトオレンジ"></div>
+          <div class="color-swatch" style="background: #f97316;" data-color="#f97316" title="鮮やかなオレンジ"></div>
+          <div class="color-swatch" style="background: #e9d5ff;" data-color="#e9d5ff" title="ラベンダー・紫"></div>
+          <div class="color-swatch" style="background: #e2e8f0;" data-color="#e2e8f0" title="ライトグレー"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="toolbar-divider"></div>
+
+    <div class="toolbar-group">
+      <div class="color-picker-dropdown">
+        <button class="toolbar-btn" id="shapeBgColorBtn" title="図形・文字枠の中の色">
+          <div class="color-btn-content">
+            <span style="font-size: 12px;">塗り色</span>
+            <div class="color-bar-indicator" id="shapeBgIndicator" style="background-color: #1a73e8;"></div>
+          </div>
+        </button>
+        <div class="color-palette" id="shapeBgPalette">
+          <div class="color-swatch transparent" data-color="transparent" title="透明（なし）"></div>
+          <div class="color-swatch" style="background: #ffffff;" data-color="#ffffff" title="白"></div>
+          <div class="color-swatch" style="background: #000000;" data-color="#000000" title="黒"></div>
+          <div class="color-swatch" style="background: #1a73e8;" data-color="#1a73e8" title="青"></div>
+          <div class="color-swatch" style="background: #ea4335;" data-color="#ea4335" title="赤"></div>
+          <div class="color-swatch" style="background: #fbbc04;" data-color="#fbbc04" title="黄色"></div>
+          <div class="color-swatch" style="background: #34a853;" data-color="#34a853" title="緑"></div>
+          <div class="color-swatch" style="background: #ff6d01;" data-color="#ff6d01" title="オレンジ"></div>
+          <div class="color-swatch" style="background: #a142f4;" data-color="#a142f4" title="紫"></div>
+          <div class="color-swatch" style="background: #24c1e0;" data-color="#24c1e0" title="水色"></div>
+          <div class="color-swatch" style="background: #f1f3f4;" data-color="#f1f3f4" title="薄いグレー"></div>
+        </div>
+      </div>
+
+      <div class="color-picker-dropdown">
+        <button class="toolbar-btn" id="shapeBorderColorBtn" title="枠線の色">
+          <div class="color-btn-content">
+            <span style="font-size: 12px;">枠線の色</span>
+            <div class="color-bar-indicator" id="shapeBorderIndicator" style="background-color: #1a73e8;"></div>
+          </div>
+        </button>
+        <div class="color-palette" id="shapeBorderPalette">
+          <div class="color-swatch transparent" data-color="transparent" title="透明（なし）"></div>
+          <div class="color-swatch" style="background: #1a73e8;" data-color="#1a73e8" title="青"></div>
+          <div class="color-swatch" style="background: #000000;" data-color="#000000" title="黒"></div>
+          <div class="color-swatch" style="background: #ea4335;" data-color="#ea4335" title="赤"></div>
+          <div class="color-swatch" style="background: #fbbc04;" data-color="#fbbc04" title="黄色"></div>
+          <div class="color-swatch" style="background: #34a853;" data-color="#34a853" title="緑"></div>
+          <div class="color-swatch" style="background: #ff6d01;" data-color="#ff6d01" title="オレンジ"></div>
+          <div class="color-swatch" style="background: #a142f4;" data-color="#a142f4" title="紫"></div>
+          <div class="color-swatch" style="background: #5f6368;" data-color="#5f6368" title="グレー"></div>
+          <div class="color-swatch" style="background: #ffffff;" data-color="#ffffff" title="白"></div>
+        </div>
+      </div>
+
+      <select class="toolbar-select" id="borderWidthSelect" title="枠線の太さ">
+        <option value="0px">枠線：なし</option>
+        <option value="1px" selected>枠線：1px (細)</option>
+        <option value="2px">枠線：2px (中)</option>
+        <option value="3px">枠線：3px (太)</option>
+        <option value="5px">枠線：5px (極太)</option>
+      </select>
+    </div>
+
+    <div class="toolbar-divider"></div>
+
+    <div class="toolbar-group">
+      <button class="toolbar-btn" data-cmd="justifyLeft" title="左に寄せる">左揃え</button>
+      <button class="toolbar-btn" data-cmd="justifyCenter" title="真ん中に置く">中央揃え</button>
+      <button class="toolbar-btn" data-cmd="justifyRight" title="右に寄せる">右揃え</button>
+      <button class="toolbar-btn" data-cmd="insertUnorderedList" title="箇条書き">• 箇条書き</button>
+      <button class="toolbar-btn" data-cmd="insertOrderedList" title="番号リスト">1. 番号順</button>
+    </div>
+
+    <div class="toolbar-divider"></div>
+
+    <div class="toolbar-group">
+      <button class="toolbar-btn" id="addTableBtn">📊 表</button>
+      <button class="toolbar-btn" id="addTextBoxBtn">📝 文字枠</button>
+      <button class="toolbar-btn" id="addRectBtn">🟦 四角</button>
+      <button class="toolbar-btn" id="addCircleBtn">🔴 丸</button>
+      <button class="toolbar-btn" id="addArrowBtn">➡ 矢印</button>
+      <button class="toolbar-btn danger-btn" id="deleteObjectBtn" title="選択中の図形・文字枠を消去">🗑️ 図形削除</button>
+    </div>
+
+    <span class="warning-badge">🔒 コピー＆ペースト禁止</span>
+  </div>
+
+  <!-- 用紙エリア -->
+  <div class="editor-container">
+    <div class="paper" contenteditable="true" id="editor" spellcheck="false"></div>
+  </div>
+
+  <script>
+    const editor = document.getElementById('editor');
+    const docTitleInput = document.getElementById('docTitle');
+
+    document.getElementById('exportPdfBtn').addEventListener('click', () => {
+      selectObject(null);
+      window.print();
+    });
+
+    const saveFileBtn = document.getElementById('saveFileBtn');
+    const loadFileBtn = document.getElementById('loadFileBtn');
+    const fileInput = document.getElementById('fileInput');
+
+    saveFileBtn.addEventListener('click', () => {
+      selectObject(null);
+      const data = {
+        title: docTitleInput.value || '無題の文書',
+        content: editor.innerHTML
+      };
+
+      const jsonStr = JSON.stringify(data, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${data.title}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    loadFileBtn.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const data = JSON.parse(event.target.result);
+          if (data.title && data.content !== undefined) {
+            docTitleInput.value = data.title;
+            editor.innerHTML = data.content;
+            rebindInteractiveObjects();
+            saveState();
+            alert('ファイルを正常に読み込みました。');
+          } else {
+            alert('有効な文書ファイルではありません。');
+          }
+        } catch (err) {
+          alert('ファイルの読み込みに失敗しました。');
+        }
+      };
+      reader.readAsText(file);
+      fileInput.value = '';
+    });
+
+    ['copy', 'cut', 'paste'].forEach(eventType => {
+      document.addEventListener(eventType, (e) => {
+        e.preventDefault();
+        alert('この画面ではコピーや貼り付け（ペースト）は禁止されています。');
+      });
+    });
+
+    document.addEventListener('contextmenu', (e) => e.preventDefault());
+    editor.addEventListener('drop', (e) => e.preventDefault());
+
+    function applyTextCommand(cmd, value = null) {
+      document.execCommand(cmd, false, value);
+      saveState();
+    }
+
+    document.querySelectorAll('.toolbar-btn[data-cmd]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        applyTextCommand(btn.getAttribute('data-cmd'));
+      });
+    });
+
+    document.getElementById('formatBlock').addEventListener('change', (e) => {
+      applyTextCommand('formatBlock', `<${e.target.value}>`);
+    });
+
+    document.getElementById('fontName').addEventListener('change', (e) => {
+      applyTextCommand('fontName', e.target.value);
+    });
+
+    document.getElementById('fontSize').addEventListener('change', (e) => {
+      const size = e.target.value;
+      const selection = window.getSelection();
+
+      if (selection && !selection.isCollapsed) {
+        const range = selection.getRangeAt(0);
+        const span = document.createElement('span');
+        span.style.fontSize = size;
+
+        try {
+          range.surroundContents(span);
+        } catch (err) {
+          document.execCommand('fontSize', false, '7');
+          const fontElements = editor.querySelectorAll('font[size="7"]');
+          fontElements.forEach(el => {
+            el.removeAttribute('size');
+            el.style.fontSize = size;
+          });
+        }
+      } else if (selectedObject) {
+        const bodyEl = selectedObject.querySelector('.shape-body');
+        if (bodyEl) {
+          bodyEl.style.fontSize = size;
+        }
+      }
+
+      saveState();
+    });
+
+    const textColorBtn = document.getElementById('textColorBtn');
+    const textColorPalette = document.getElementById('textColorPalette');
+    const textColorIndicator = document.getElementById('textColorIndicator');
+
+    const highlightColorBtn = document.getElementById('highlightColorBtn');
+    const highlightPalette = document.getElementById('highlightPalette');
+    const highlightColorIndicator = document.getElementById('highlightColorIndicator');
+
+    const underlineBtn = document.getElementById('underlineBtn');
+    const underlineColorBtn = document.getElementById('underlineColorBtn');
+    const underlinePalette = document.getElementById('underlinePalette');
+    const underlineColorIndicator = document.getElementById('underlineColorIndicator');
+    let currentUnderlineColor = '#000000';
+
+    const shapeBgColorBtn = document.getElementById('shapeBgColorBtn');
+    const shapeBgPalette = document.getElementById('shapeBgPalette');
+    const shapeBgIndicator = document.getElementById('shapeBgIndicator');
+
+    const shapeBorderColorBtn = document.getElementById('shapeBorderColorBtn');
+    const shapeBorderPalette = document.getElementById('shapeBorderPalette');
+    const shapeBorderIndicator = document.getElementById('shapeBorderIndicator');
+
+    const borderWidthSelect = document.getElementById('borderWidthSelect');
+
+    function closeAllPalettes() {
+      textColorPalette.classList.remove('show');
+      highlightPalette.classList.remove('show');
+      underlinePalette.classList.remove('show');
+      shapeBgPalette.classList.remove('show');
+      shapeBorderPalette.classList.remove('show');
+    }
+
+    textColorBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeAllPalettes();
+      textColorPalette.classList.toggle('show');
+    });
+
+    highlightColorBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeAllPalettes();
+      highlightPalette.classList.toggle('show');
+    });
+
+    underlineColorBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeAllPalettes();
+      underlinePalette.classList.toggle('show');
+    });
+
+    textColorPalette.querySelectorAll('.color-swatch').forEach(swatch => {
+      swatch.addEventListener('click', () => {
+        const selectedColor = swatch.getAttribute('data-color');
+        applyTextCommand('foreColor', selectedColor);
+        textColorIndicator.style.backgroundColor = selectedColor;
+        textColorPalette.classList.remove('show');
+      });
+    });
+
+    highlightPalette.querySelectorAll('.color-swatch').forEach(swatch => {
+      swatch.addEventListener('click', () => {
+        const selectedColor = swatch.getAttribute('data-color');
+        applyTextCommand('hiliteColor', selectedColor);
+        highlightColorIndicator.style.backgroundColor = selectedColor === 'transparent' ? '#ffffff' : selectedColor;
+        highlightPalette.classList.remove('show');
+      });
+    });
+
+    // カラー指定付き下線処理
+    function applyStyledUnderline(color) {
+      const selection = window.getSelection();
+      if (!selection || selection.isCollapsed) {
+        applyTextCommand('underline');
+        return;
+      }
+
+      const range = selection.getRangeAt(0);
+      const span = document.createElement('span');
+      span.style.textDecoration = 'underline';
+      span.style.textDecorationColor = color;
+
+      try {
+        range.surroundContents(span);
+      } catch (e) {
+        applyTextCommand('underline');
+      }
+      saveState();
+    }
+
+    underlineBtn.addEventListener('click', () => {
+      applyStyledUnderline(currentUnderlineColor);
+    });
+
+    underlinePalette.querySelectorAll('.color-swatch').forEach(swatch => {
+      swatch.addEventListener('click', () => {
+        const selectedColor = swatch.getAttribute('data-color');
+        currentUnderlineColor = selectedColor;
+        underlineColorIndicator.style.backgroundColor = selectedColor;
+        applyStyledUnderline(selectedColor);
+        underlinePalette.classList.remove('show');
+      });
+    });
+
+    shapeBgColorBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeAllPalettes();
+      shapeBgPalette.classList.toggle('show');
+    });
+
+    shapeBorderColorBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeAllPalettes();
+      shapeBorderPalette.classList.toggle('show');
+    });
+
+    shapeBgPalette.querySelectorAll('.color-swatch').forEach(swatch => {
+      swatch.addEventListener('click', () => {
+        const color = swatch.getAttribute('data-color');
+        shapeBgIndicator.style.backgroundColor = color === 'transparent' ? '#ffffff' : color;
+        shapeBgPalette.classList.remove('show');
+
+        if (selectedObject) {
+          const bodyEl = selectedObject.querySelector('.shape-body');
+          if (bodyEl) bodyEl.style.backgroundColor = color;
+          saveState();
+        }
+      });
+    });
+
+    shapeBorderPalette.querySelectorAll('.color-swatch').forEach(swatch => {
+      swatch.addEventListener('click', () => {
+        const color = swatch.getAttribute('data-color');
+        shapeBorderIndicator.style.backgroundColor = color === 'transparent' ? '#ffffff' : color;
+        shapeBorderPalette.classList.remove('show');
+
+        if (selectedObject) {
+          const bodyEl = selectedObject.querySelector('.shape-body');
+          if (bodyEl) bodyEl.style.borderColor = color;
+          saveState();
+        }
+      });
+    });
+
+    borderWidthSelect.addEventListener('change', (e) => {
+      const width = e.target.value;
+      if (selectedObject) {
+        const bodyEl = selectedObject.querySelector('.shape-body');
+        if (bodyEl) {
+          bodyEl.style.borderWidth = width;
+          bodyEl.style.borderStyle = width === '0px' ? 'none' : 'solid';
+        }
+        saveState();
+      }
+    });
+
+    document.addEventListener('click', () => closeAllPalettes());
+
+    document.getElementById('addTableBtn').addEventListener('click', () => {
+      const tableHTML = `
+        <table style="width:100%; border-collapse:collapse; margin:10px 0;">
+          <tbody>
+            <tr><td> </td><td> </td><td> </td></tr>
+            <tr><td> </td><td> </td><td> </td></tr>
+          </tbody>
+        </table><p></p>
+      `;
+      document.execCommand('insertHTML', false, tableHTML);
+      saveState();
+    });
+
+    const historyStack = [];
+    let historyIndex = -1;
+
+    function saveState() {
+      if (historyIndex < historyStack.length - 1) {
+        historyStack.splice(historyIndex + 1);
+      }
+      const currentContent = editor.innerHTML;
+      if (historyStack[historyIndex] !== currentContent) {
+        historyStack.push(currentContent);
+        if (historyStack.length > 50) historyStack.shift();
+        else historyIndex++;
+      }
+    }
+
+    function undo() {
+      if (historyIndex > 0) {
+        historyIndex--;
+        editor.innerHTML = historyStack[historyIndex];
+        rebindInteractiveObjects();
+      }
+    }
+
+    function redo() {
+      if (historyIndex < historyStack.length - 1) {
+        historyIndex++;
+        editor.innerHTML = historyStack[historyIndex];
+        rebindInteractiveObjects();
+      }
+    }
+
+    document.getElementById('undoBtn').addEventListener('click', undo);
+    document.getElementById('redoBtn').addEventListener('click', redo);
+    editor.addEventListener('input', () => saveState());
+
+    // 図形消去ボタン処理
+    document.getElementById('deleteObjectBtn').addEventListener('click', () => {
+      if (selectedObject) {
+        selectedObject.remove();
+        selectedObject = null;
+        saveState();
+      } else {
+        alert('消去したい図形または文字枠をクリックして選択してください。');
+      }
+    });
+
+    // キーボード入力制御（Enter改行・削除キー改善）
+    document.addEventListener('keydown', (e) => {
+      const isCmdOrCtrl = e.metaKey || e.ctrlKey;
+      const key = e.key.toLowerCase();
+
+      if (isCmdOrCtrl && ['c', 'v', 'x'].includes(key)) {
+        e.preventDefault();
+        alert('ショートカットキーでのコピーや貼り付けは禁止されています。');
+        return;
+      }
+
+      if (isCmdOrCtrl && key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); return; }
+      if ((isCmdOrCtrl && key === 'y') || (isCmdOrCtrl && e.shiftKey && key === 'z')) { e.preventDefault(); redo(); return; }
+
+      const activeEl = document.activeElement;
+      const isEditingText = activeEl && (
+        activeEl.isContentEditable || 
+        activeEl.tagName === 'INPUT' || 
+        activeEl.tagName === 'TEXTAREA'
+      );
+
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedObject && !isEditingText) {
+        e.preventDefault();
+        selectedObject.remove();
+        selectedObject = null;
+        saveState();
+      }
+    });
+
+    // 図形・文字枠の移動・回転・リサイズ処理
+    let selectedObject = null;
+
+    function createInteractiveObject(type) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'interactive-object';
+      wrapper.setAttribute('contenteditable', 'false');
+      wrapper.style.left = '100px';
+      wrapper.style.top = '100px';
+
+      const rotateHandle = document.createElement('div');
+      rotateHandle.className = 'rotate-handle';
+      wrapper.appendChild(rotateHandle);
+
+      ['nw', 'ne', 'sw', 'se'].forEach(pos => {
+        const h = document.createElement('div');
+        h.className = `resize-handle ${pos}`;
+        h.dataset.handle = pos;
+        wrapper.appendChild(h);
+      });
+
+      const shape = document.createElement('div');
+      shape.className = type === 'textbox' ? 'textbox-shape shape-body' : `shape-body shape-${type}`;
+      shape.setAttribute('contenteditable', 'true');
+      shape.innerHTML = type === 'textbox' ? 'ここに文字を入力...' : '文字入力';
+      wrapper.appendChild(shape);
+
+      editor.appendChild(wrapper);
+      bindObjectEvents(wrapper);
+      selectObject(wrapper);
+      saveState();
+    }
+
+    function selectObject(obj) {
+      if (selectedObject && selectedObject !== obj) {
+        selectedObject.classList.remove('selected');
+      }
+      selectedObject = obj;
+      if (selectedObject) {
+        selectedObject.classList.add('selected');
+        const bodyEl = selectedObject.querySelector('.shape-body');
+        if (bodyEl) {
+          const bg = getComputedStyle(bodyEl).backgroundColor;
+          const border = getComputedStyle(bodyEl).borderColor;
+          shapeBgIndicator.style.backgroundColor = (bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent') ? '#ffffff' : bg;
+          shapeBorderIndicator.style.backgroundColor = (border === 'rgba(0, 0, 0, 0)' || border === 'transparent') ? '#ffffff' : border;
+          borderWidthSelect.value = getComputedStyle(bodyEl).borderWidth;
+        }
+      }
+    }
+
+    document.addEventListener('mousedown', (e) => {
+      if (!e.target.closest('.interactive-object') && !e.target.closest('.toolbar')) {
+        selectObject(null);
+      }
+    });
+
+    function bindObjectEvents(obj) {
+      const rotateHandle = obj.querySelector('.rotate-handle');
+      const bodyEl = obj.querySelector('.shape-body');
+      const resizeHandles = obj.querySelectorAll('.resize-handle');
+
+      let isDragging = false;
+      let isRotating = false;
+      let isResizing = false;
+      let startX, startY, initialLeft, initialTop, initialWidth, initialHeight;
+
+      // 改行時の複製防止
+      bodyEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.stopPropagation();
+          document.execCommand('insertLineBreak', false, null);
+          e.preventDefault();
+        }
+      });
+
+      // 移動処理
+      obj.addEventListener('mousedown', (e) => {
+        if (e.target.classList.contains('resize-handle') || e.target.classList.contains('rotate-handle')) {
+          return;
+        }
+
+        selectObject(obj);
+
+        if (e.target === bodyEl && document.activeElement === bodyEl) {
+          return;
+        }
+
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        initialLeft = parseInt(obj.style.left, 10) || obj.offsetLeft;
+        initialTop = parseInt(obj.style.top, 10) || obj.offsetTop;
+
+        const onMouseMove = (me) => {
+          if (!isDragging) return;
+          const dx = me.clientX - startX;
+          const dy = me.clientY - startY;
+          obj.style.left = `${initialLeft + dx}px`;
+          obj.style.top = `${initialTop + dy}px`;
+        };
+
+        const onMouseUp = () => {
+          if (isDragging) {
+            isDragging = false;
+            saveState();
+          }
+          document.removeEventListener('mousemove', onMouseMove);
+          document.removeEventListener('mouseup', onMouseUp);
+        };
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+      });
+
+      // 回転処理
+      rotateHandle.addEventListener('mousedown', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        isRotating = true;
+
+        const rect = obj.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+
+        const onMouseMove = (me) => {
+          if (!isRotating) return;
+          const radians = Math.atan2(me.clientX - centerX, -(me.clientY - centerY));
+          const degrees = Math.round(radians * (180 / Math.PI));
+          obj.style.transform = `rotate(${degrees}deg)`;
+        };
+
+        const onMouseUp = () => {
+          if (isRotating) {
+            isRotating = false;
+            saveState();
+          }
+          document.removeEventListener('mousemove', onMouseMove);
+          document.removeEventListener('mouseup', onMouseUp);
+        };
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+      });
+
+      // リサイズ処理
+      resizeHandles.forEach(handle => {
+        handle.addEventListener('mousedown', (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          isResizing = true;
+          const handleType = handle.dataset.handle;
+
+          startX = e.clientX;
+          startY = e.clientY;
+          initialWidth = bodyEl.offsetWidth;
+          initialHeight = bodyEl.offsetHeight;
+          initialLeft = parseInt(obj.style.left, 10) || obj.offsetLeft;
+          initialTop = parseInt(obj.style.top, 10) || obj.offsetTop;
+
+          const onMouseMove = (me) => {
+            if (!isResizing) return;
+            const dx = me.clientX - startX;
+            const dy = me.clientY - startY;
+
+            let newWidth = initialWidth;
+            let newHeight = initialHeight;
+            let newLeft = initialLeft;
+            let newTop = initialTop;
+
+            if (handleType.includes('e')) newWidth = Math.max(30, initialWidth + dx);
+            if (handleType.includes('s')) newHeight = Math.max(30, initialHeight + dy);
+            if (handleType.includes('w')) {
+              const possibleWidth = initialWidth - dx;
+              if (possibleWidth > 30) {
+                newWidth = possibleWidth;
+                newLeft = initialLeft + dx;
+              }
+            }
+            if (handleType.includes('n')) {
+              const possibleHeight = initialHeight - dy;
+              if (possibleHeight > 30) {
+                newHeight = possibleHeight;
+                newTop = initialTop + dy;
+              }
+            }
+
+            bodyEl.style.width = `${newWidth}px`;
+            bodyEl.style.height = `${newHeight}px`;
+            obj.style.left = `${newLeft}px`;
+            obj.style.top = `${newTop}px`;
+          };
+
+          const onMouseUp = () => {
+            if (isResizing) {
+              isResizing = false;
+              saveState();
+            }
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+          };
+
+          document.addEventListener('mousemove', onMouseMove);
+          document.addEventListener('mouseup', onMouseUp);
+        });
+      });
+    }
+
+    function rebindInteractiveObjects() {
+      document.querySelectorAll('.interactive-object').forEach(obj => {
+        bindObjectEvents(obj);
+      });
+    }
+
+    document.getElementById('addTextBoxBtn').addEventListener('click', () => createInteractiveObject('textbox'));
+    document.getElementById('addRectBtn').addEventListener('click', () => createInteractiveObject('rect'));
+    document.getElementById('addCircleBtn').addEventListener('click', () => createInteractiveObject('circle'));
+    document.getElementById('addArrowBtn').addEventListener('click', () => createInteractiveObject('arrow'));
+
+    window.addEventListener('DOMContentLoaded', () => {
+      saveState();
+    });
+  </script>
+</body>
+</html>
